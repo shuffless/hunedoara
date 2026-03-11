@@ -1,0 +1,105 @@
+/* Patient Hub Styles */
+
+body {
+    background-color: #f4f6f9;
+    font-size: 0.9rem;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* Pending patients table */
+#pending-table .bed-actions {
+    white-space: nowrap;
+}
+
+#pending-table .bed-actions .btn {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+}
+
+/* Stats boxes */
+.card-body h4 {
+    margin-bottom: 0;
+    color: #333;
+}
+
+/* Table tweaks */
+.table-sm td, .table-sm th {
+    font-size: 0.8rem;
+}
+
+/* Login page */
+.card.shadow {
+    margin-top: 10vh;
+}
+
+/* Dashboard layout */
+.row > [class*="col-"] {
+    margin-bottom: 0;
+}
+
+/* Badge tweaks */
+.badge {
+    font-weight: 500;
+}
+
+/* DataTables adjustments */
+.dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+/* Fade out animation for removed rows */
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+/* Button disabled state for allocated beds */
+.bed-btn.allocated {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #pending-table .bed-actions .btn {
+        font-size: 0.65rem;
+        padding: 1px 5px;
+    }
+}
+
+/* Modal pre formatting */
+.modal pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 0.8rem;
+}
+
+/* Navbar brand */
+.navbar-brand {
+    font-weight: 700;
+}
+
+/* Error log truncation */
+.error-message-cell {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
