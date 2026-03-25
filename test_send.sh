@@ -6,8 +6,9 @@
 # Defaults to HTTP mode.
 
 MODE=${1:-http}
-SERVER="localhost"
-HTTP_URL="http://$SERVER/patient-hub/api/receive.php"
+SERVER="${PATIENT_HUB_HOST:-hunedoara.api}"
+HTTP_URL="https://$SERVER/api/receive.php"
+CURL_OPTS="-s -k"
 TCP_PORT=5500
 
 echo "=== Patient Hub Test Sender ==="
@@ -63,16 +64,16 @@ XML_MSG='<?xml version="1.0" encoding="UTF-8"?>
 
 if [ "$MODE" == "http" ]; then
     echo "--- Sending HL7 via HTTP ---"
-    curl -s -X POST "$HTTP_URL" \
+    curl $CURL_OPTS -X POST "$HTTP_URL" \
         -H "Content-Type: application/hl7-v2" \
-        -d "$HL7_MSG" | python3 -m json.tool 2>/dev/null || curl -s -X POST "$HTTP_URL" -d "$HL7_MSG"
+        -d "$HL7_MSG" | python3 -m json.tool 2>/dev/null || curl $CURL_OPTS -X POST "$HTTP_URL" -d "$HL7_MSG"
     echo ""
     echo ""
 
     echo "--- Sending XML via HTTP ---"
-    curl -s -X POST "$HTTP_URL" \
+    curl $CURL_OPTS -X POST "$HTTP_URL" \
         -H "Content-Type: application/xml" \
-        -d "$XML_MSG" | python3 -m json.tool 2>/dev/null || curl -s -X POST "$HTTP_URL" -d "$XML_MSG"
+        -d "$XML_MSG" | python3 -m json.tool 2>/dev/null || curl $CURL_OPTS -X POST "$HTTP_URL" -d "$XML_MSG"
     echo ""
 
 elif [ "$MODE" == "tcp" ]; then
@@ -90,4 +91,4 @@ else
 fi
 
 echo ""
-echo "Done. Check the dashboard at http://$SERVER/patient-hub/dashboard.php"
+echo "Done. Check the dashboard at https://$SERVER/dashboard.php"
