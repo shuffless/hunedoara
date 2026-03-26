@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS pending_patients (
     id INT AUTO_INCREMENT PRIMARY KEY,
     request_id INT NOT NULL,
     patient_name VARCHAR(255),
-    status ENUM('pending','allocated','cancelled') NOT NULL DEFAULT 'pending',
+    status ENUM('pending','allocated','cancelled','discharged') NOT NULL DEFAULT 'pending',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_status (status),
     FOREIGN KEY (request_id) REFERENCES raw_requests(id) ON DELETE CASCADE

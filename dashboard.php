@@ -4,6 +4,7 @@ require_once __DIR__ . '/includes/header.php';
 $stats = getStats();
 $pendingPatients = getPendingPatients();
 $availableBeds = getAvailableBeds();
+$allocatedPatients = getAllocatedPatients();
 
 // Get users list
 $db = getDB();
@@ -63,6 +64,56 @@ $users = $db->query('SELECT id, username, is_manager, created_at FROM users ORDE
         </div>
     </div>
 
+    <!-- Allocated Patients -->
+    <div class="col-lg-8 mb-3">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <i class="bi bi-bed-fill"></i> Allocated Patients
+                <span class="badge bg-light text-dark float-end" id="allocated-count-badge"><?= count($allocatedPatients) ?> allocated</span>
+            </div>
+            <div class="card-body" id="allocated-patients-container">
+                <?php if (empty($allocatedPatients)): ?>
+                    <p class="text-muted text-center">No allocated patients.</p>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="allocated-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Patient Name</th>
+                                    <th>Allocated Bed</th>
+                                    <th>Admitted</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($allocatedPatients as $i => $patient): ?>
+                                <tr id="allocated-row-<?= $patient['id'] ?>">
+                                    <td><?= $i + 1 ?></td>
+                                    <td><strong><?= htmlspecialchars($patient['patient_name']) ?></strong></td>
+                                    <td><span class="badge bg-success"><?= htmlspecialchars($patient['bed_name']) ?></span></td>
+                                    <td><?= htmlspecialchars($patient['created_at']) ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-warning discharge-btn"
+                                                data-patient-id="<?= $patient['id'] ?>"
+                                                data-patient-name="<?= htmlspecialchars($patient['patient_name']) ?>"
+                                                data-bed-name="<?= htmlspecialchars($patient['bed_name']) ?>">
+                                            Discharge
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 mb-3"></div>
+</div>
+
+<div class="row">
     <!-- Right Column: Stats + Users -->
     <div class="col-lg-4">
         <!-- Box B: Requests Stats -->

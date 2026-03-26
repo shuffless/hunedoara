@@ -117,6 +117,42 @@ $(document).ready(function () {
         });
     });
 
+    // --- Discharge Patient ---
+    $(document).on('click', '.discharge-btn', function () {
+        var btn = $(this);
+        var patientId = btn.data('patient-id');
+        var patientName = btn.data('patient-name');
+        var bedName = btn.data('bed-name');
+
+        if (!confirm('Discharge ' + patientName + ' and free ' + bedName + '?')) return;
+
+        btn.prop('disabled', true).text('Discharging...');
+
+        $.ajax({
+            url: 'api/discharge.php',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ patient_id: patientId }),
+            success: function (res) {
+                if (res.success) {
+                    $('#allocated-row-' + patientId).addClass('fade-out');
+                    setTimeout(function () {
+                        $('#allocated-row-' + patientId).remove();
+                        updateAllocatedCount();
+                    }, 500);
+                    alert(res.patient_name + ' discharged. ' + res.bed_name + ' is now free.');
+                } else {
+                    alert('Error: ' + (res.error || 'Unknown error'));
+                    btn.prop('disabled', false).text('Discharge');
+                }
+            },
+            error: function () {
+                alert('Network error. Please try again.');
+                btn.prop('disabled', false).text('Discharge');
+            }
+        });
+    });
+
     // --- User Management ---
     $('#add-user-form').on('submit', function (e) {
         e.preventDefault();
@@ -231,12 +267,23 @@ $(document).ready(function () {
     // --- Helpers ---
     function updatePendingCount() {
         var count = $('#pending-table tbody tr:visible').length;
-        var badge = $('.card-header .badge.bg-light');
+        var badge = $('.card-header .badge.bg-light').first();
         if (badge.length) {
             badge.text(count + ' pending');
         }
         if (count === 0) {
             $('#pending-patients-container').html('<p class="text-muted text-center">No pending patients.</p>');
+        }
+    }
+
+    function updateAllocatedCount() {
+        var count = $('#allocated-table tbody tr:visible').length;
+        var badge = $('#allocated-count-badge');
+        if (badge.length) {
+            badge.text(count + ' allocated');
+        }
+        if (count === 0) {
+            $('#allocated-patients-container').html('<p class="text-muted text-center">No allocated patients.</p>');
         }
     }
 

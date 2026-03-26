@@ -229,6 +229,52 @@ function cancelPatient($pendingPatientId, $reason) {
 }
 
 /**
+ * Get allocated patients with their bed info.
+ */
+function getAllocatedPatients() {
+    $db = getDB();
+    $stmt = $db->query('SELECT pp.id, pp.patient_name, pp.created_at, b.bed_name FROM pending_patients pp INNER JOIN beds b ON b.occupied_by = pp.id WHERE pp.status = "allocated" ORDER BY pp.created_at ASC');
+    return $stmt->fetchAll();
+}
+
+/**
+ * Discharge a patient and free the bed.
+ */
+function dischargePatient($pendingPatientId) {
+    $db = getDB();
+
+    try {
+        $db->beginTransaction();
+
+        $stmt = $db->prepare('SELECT pp.id, pp.patient_name, b.id AS bed_id, b.bed_name FROM pending_patients pp INNER JOIN beds b ON b.occupied_by = pp.id WHERE pp.id = ? AND pp.status = "allocated"');
+        $stmt->execute([$pendingPatientId]);
+        $info = $stmt->fetch();
+
+        if (!$info) {
+            $db->rollBack();
+            return ['success' => false, 'error' => 'Patient not found or not allocated.'];
+        }
+
+        // Free the bed
+        $stmt = $db->prepare('UPDATE beds SET is_occupied = 0, occupied_by = NULL WHERE id = ?');
+        $stmt->execute([$info['bed_id']]);
+
+        // Update patient status to discharged
+        $stmt = $db->prepare('UPDATE pending_patients SET status = "discharged" WHERE id = ?');
+        $stmt->execute([$pendingPatientId]);
+
+        $db->commit();
+
+        return ['success' => true, 'bed_name' => $info['bed_name'], 'patient_name' => $info['patient_name']];
+
+    } catch (Exception $e) {
+        $db->rollBack();
+        logError('Discharge failed: ' . $e->getMessage(), 'discharge_patient');
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+/**
  * Get statistics for dashboard.
  */
 function getStats() {
