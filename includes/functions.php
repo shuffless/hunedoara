@@ -24,25 +24,36 @@ function detectFormat($rawData) {
 }
 
 /**
+ * Generate a fingerprint from parsed patient data.
+ * Uses key identifying fields to detect duplicates.
+ */
+function generateFingerprint($patientData) {
+    $fields = [
+        $patientData['message_control_id'] ?? '',
+        $patientData['patient_id'] ?? '',
+        $patientData['patient_name'] ?? '',
+        $patientData['date_of_birth'] ?? '',
+        $patientData['message_datetime'] ?? '',
+        $patientData['message_type'] ?? '',
+    ];
+    return hash('sha256', implode('|', $fields));
+}
+
+/**
  * Process incoming patient data:
- * 1. Log raw request
- * 2. Parse and store in EAV table
- * 3. Add to pending queue
+ * 1. Parse and generate fingerprint
+ * 2. Check for duplicates
+ * 3. Log raw request
+ * 4. Store in EAV table
+ * 5. Add to pending queue
  */
 function processIncomingData($rawData, $senderIp) {
     $db = getDB();
 
     try {
-        $db->beginTransaction();
-
         $format = detectFormat($rawData);
 
-        // Step 1: Log raw request
-        $stmt = $db->prepare('INSERT INTO raw_requests (raw_data, data_format, sender_ip, received_at) VALUES (?, ?, ?, NOW())');
-        $stmt->execute([$rawData, $format, $senderIp]);
-        $requestId = $db->lastInsertId();
-
-        // Step 2: Parse data
+        // Step 1: Parse data first to generate fingerprint
         $patientData = [];
         if ($format === 'hl7') {
             $parser = new HL7Parser();
@@ -53,13 +64,31 @@ function processIncomingData($rawData, $senderIp) {
             $patientData = $parser->parse($rawData);
         }
 
-        // Step 3: Store in EAV table
+        // Step 2: Generate fingerprint and check for duplicates
+        $fingerprint = generateFingerprint($patientData);
+
+        $stmt = $db->prepare('SELECT id FROM raw_requests WHERE fingerprint = ?');
+        $stmt->execute([$fingerprint]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            return ['success' => false, 'error' => 'Duplicate request detected (fingerprint match with request #' . $existing['id'] . ').'];
+        }
+
+        $db->beginTransaction();
+
+        // Step 3: Log raw request with fingerprint
+        $stmt = $db->prepare('INSERT INTO raw_requests (raw_data, data_format, sender_ip, fingerprint, received_at) VALUES (?, ?, ?, ?, NOW())');
+        $stmt->execute([$rawData, $format, $senderIp, $fingerprint]);
+        $requestId = $db->lastInsertId();
+
+        // Step 4: Store in EAV table
         $stmt = $db->prepare('INSERT INTO patient_data (id, field_name, field_value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE field_value = VALUES(field_value)');
         foreach ($patientData as $fieldName => $value) {
             $stmt->execute([$requestId, $fieldName, $value]);
         }
 
-        // Step 4: Add to pending queue
+        // Step 5: Add to pending queue
         $patientName = $patientData['patient_name']
             ?? trim(($patientData['patient_first_name'] ?? '') . ' ' . ($patientData['patient_last_name'] ?? ''))
             ?: 'Unknown Patient';
@@ -72,7 +101,9 @@ function processIncomingData($rawData, $senderIp) {
         return ['success' => true, 'request_id' => $requestId, 'patient_name' => $patientName];
 
     } catch (Exception $e) {
-        $db->rollBack();
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         logError('Failed to process incoming data: ' . $e->getMessage(), 'process_incoming');
         return ['success' => false, 'error' => $e->getMessage()];
     }

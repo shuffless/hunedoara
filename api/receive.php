@@ -41,7 +41,8 @@ if ($result['success']) {
         'message' => 'Data received and processed successfully.'
     ]);
 } else {
-    http_response_code(500);
+    $isDuplicate = strpos($result['error'] ?? '', 'Duplicate') !== false;
+    http_response_code($isDuplicate ? 409 : 500);
     echo json_encode([
         'success' => false,
         'error' => $result['error']

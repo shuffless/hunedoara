@@ -10,9 +10,11 @@ CREATE TABLE IF NOT EXISTS raw_requests (
     raw_data LONGTEXT NOT NULL,
     data_format ENUM('hl7','xml') NOT NULL,
     sender_ip VARCHAR(45) NOT NULL,
+    fingerprint VARCHAR(64) DEFAULT NULL,
     received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_received_at (received_at),
-    INDEX idx_sender_ip (sender_ip)
+    INDEX idx_sender_ip (sender_ip),
+    UNIQUE INDEX idx_fingerprint (fingerprint)
 ) ENGINE=InnoDB;
 
 -- Processed patient data (EAV model)
