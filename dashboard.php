@@ -12,9 +12,10 @@ $users = $db->query('SELECT id, username, is_manager, created_at FROM users ORDE
 ?>
 
 <div class="row">
-    <!-- Box A: Pending Patients / Bed Allocation -->
-    <div class="col-lg-8 mb-3">
-        <div class="card">
+    <!-- Left Column: Pending + Allocated -->
+    <div class="col-lg-6">
+        <!-- Pending Patients -->
+        <div class="card mb-3">
             <div class="card-header bg-primary text-white">
                 <i class="bi bi-people-fill"></i> Pending Patients - Bed Allocation
                 <span class="badge bg-light text-dark float-end"><?= count($pendingPatients) ?> pending</span>
@@ -62,11 +63,9 @@ $users = $db->query('SELECT id, username, is_manager, created_at FROM users ORDE
                 <?php endif; ?>
             </div>
         </div>
-    </div>
 
-    <!-- Allocated Patients -->
-    <div class="col-lg-8 mb-3">
-        <div class="card">
+        <!-- Allocated Patients -->
+        <div class="card mb-3">
             <div class="card-header bg-success text-white">
                 <i class="bi bi-bed-fill"></i> Allocated Patients
                 <span class="badge bg-light text-dark float-end" id="allocated-count-badge"><?= count($allocatedPatients) ?> allocated</span>
@@ -110,13 +109,10 @@ $users = $db->query('SELECT id, username, is_manager, created_at FROM users ORDE
             </div>
         </div>
     </div>
-    <div class="col-lg-4 mb-3"></div>
-</div>
 
-<div class="row">
-    <!-- Right Column: Stats + Users -->
-    <div class="col-lg-4">
-        <!-- Box B: Requests Stats -->
+    <!-- Right Column: Stats -->
+    <div class="col-lg-6">
+        <!-- Incoming Requests -->
         <div class="card mb-3">
             <div class="card-header bg-info text-white">
                 <i class="bi bi-inbox-fill"></i> Incoming Requests
@@ -155,7 +151,7 @@ $users = $db->query('SELECT id, username, is_manager, created_at FROM users ORDE
             </div>
         </div>
 
-        <!-- Box C: Messages Stats -->
+        <!-- Sent Messages -->
         <div class="card mb-3">
             <div class="card-header bg-success text-white">
                 <i class="bi bi-send-fill"></i> Sent Messages
@@ -207,7 +203,7 @@ $users = $db->query('SELECT id, username, is_manager, created_at FROM users ORDE
 </div>
 
 <div class="row">
-    <!-- Box D: Error Log -->
+    <!-- Error Log -->
     <div class="col-lg-6 mb-3">
         <div class="card">
             <div class="card-header bg-danger text-white">
@@ -234,7 +230,7 @@ $users = $db->query('SELECT id, username, is_manager, created_at FROM users ORDE
         </div>
     </div>
 
-    <!-- Box E: User Management -->
+    <!-- User Management -->
     <div class="col-lg-6 mb-3">
         <div class="card">
             <div class="card-header bg-warning text-dark">
