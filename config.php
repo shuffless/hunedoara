@@ -5,9 +5,9 @@
 
 // Database settings
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'patient_hub');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_NAME', 'patienthub');
+define('DB_USER', 'patientaccess');
+define('DB_PASS', 'XJ7j6sl2bkLNIUbfvF33');
 
 // Destination HL7 system
 define('DEST_IP', '192.168.20.80');
