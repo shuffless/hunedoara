@@ -209,6 +209,57 @@ class HL7Parser {
     }
 
     /**
+     * Build a discharge HL7 message (ADT^A03).
+     */
+    public static function buildADT_A03($patientData, $bedName) {
+        $timestamp = date('YmdHis');
+        $controlId = 'PH' . time() . rand(1000, 9999);
+
+        $msh = implode('|', [
+            'MSH', '^~\\&',
+            'PatientHub', 'PatientHub',
+            'DestSystem', 'DestFacility',
+            $timestamp, '',
+            'ADT^A03', $controlId,
+            'P', '2.3'
+        ]);
+
+        $evn = implode('|', [
+            'EVN', 'A03', $timestamp
+        ]);
+
+        $patientName = ($patientData['patient_last_name'] ?? 'Unknown') . '^'
+                      . ($patientData['patient_first_name'] ?? '') . '^'
+                      . ($patientData['patient_middle_name'] ?? '');
+
+        $pid = implode('|', [
+            'PID', '1', '',
+            $patientData['patient_id'] ?? '', '',
+            $patientName, '',
+            $patientData['date_of_birth'] ?? '', $patientData['sex'] ?? '',
+            '', '', $patientData['address'] ?? '', '',
+            $patientData['phone'] ?? '', '', '', '', '', '',
+            $patientData['ssn'] ?? ''
+        ]);
+
+        $pv1 = implode('|', [
+            'PV1', '1',
+            $patientData['patient_class'] ?? 'I',
+            $bedName, '', '', '',
+            $patientData['attending_doctor'] ?? '',
+            $patientData['referring_doctor'] ?? '',
+            '', '', '', '', '', '', '', '', '', '',
+            $patientData['visit_number'] ?? '',
+            '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+            $timestamp
+        ]);
+
+        $message = $msh . "\r" . $evn . "\r" . $pid . "\r" . $pv1 . "\r";
+
+        return $message;
+    }
+
+    /**
      * Send an HL7 message via MLLP to the destination.
      * Returns the response or false on failure.
      */

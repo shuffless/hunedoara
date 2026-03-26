@@ -246,7 +246,7 @@ function dischargePatient($pendingPatientId) {
     try {
         $db->beginTransaction();
 
-        $stmt = $db->prepare('SELECT pp.id, pp.patient_name, b.id AS bed_id, b.bed_name FROM pending_patients pp INNER JOIN beds b ON b.occupied_by = pp.id WHERE pp.id = ? AND pp.status = "allocated"');
+        $stmt = $db->prepare('SELECT pp.id, pp.request_id, pp.patient_name, b.id AS bed_id, b.bed_name FROM pending_patients pp INNER JOIN beds b ON b.occupied_by = pp.id WHERE pp.id = ? AND pp.status = "allocated"');
         $stmt->execute([$pendingPatientId]);
         $info = $stmt->fetch();
 
@@ -254,6 +254,23 @@ function dischargePatient($pendingPatientId) {
             $db->rollBack();
             return ['success' => false, 'error' => 'Patient not found or not allocated.'];
         }
+
+        // Get patient EAV data
+        $patientData = getPatientData($info['request_id']);
+
+        // Build and send ADT^A03 discharge message
+        $hl7Message = HL7Parser::buildADT_A03($patientData, $info['bed_name']);
+        $response = HL7Parser::sendMessage($hl7Message);
+        $responseStatus = ($response !== false && $response !== '') ? 'success' : 'failure';
+
+        if ($response === false) {
+            $response = 'Connection failed';
+            $responseStatus = 'failure';
+        }
+
+        // Log sent message
+        $stmt = $db->prepare('INSERT INTO sent_messages (pending_patient_id, hl7_message, event_type, allocated_bed, cancel_reason, destination_response, response_status, sent_at) VALUES (?, ?, "discharge", ?, NULL, ?, ?, NOW())');
+        $stmt->execute([$pendingPatientId, $hl7Message, $info['bed_name'], $response, $responseStatus]);
 
         // Free the bed
         $stmt = $db->prepare('UPDATE beds SET is_occupied = 0, occupied_by = NULL WHERE id = ?');
@@ -265,7 +282,7 @@ function dischargePatient($pendingPatientId) {
 
         $db->commit();
 
-        return ['success' => true, 'bed_name' => $info['bed_name'], 'patient_name' => $info['patient_name']];
+        return ['success' => true, 'bed_name' => $info['bed_name'], 'patient_name' => $info['patient_name'], 'response_status' => $responseStatus, 'destination_response' => $response];
 
     } catch (Exception $e) {
         $db->rollBack();

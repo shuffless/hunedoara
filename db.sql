@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS sent_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     pending_patient_id INT NOT NULL,
     hl7_message LONGTEXT NOT NULL,
-    event_type ENUM('bed_allocation','cancellation') NOT NULL,
+    event_type ENUM('bed_allocation','cancellation','discharge') NOT NULL,
     allocated_bed VARCHAR(50) DEFAULT NULL,
     cancel_reason TEXT DEFAULT NULL,
     destination_response TEXT DEFAULT NULL,
