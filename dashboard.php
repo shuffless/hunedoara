@@ -9,6 +9,9 @@ $allocatedPatients = getAllocatedPatients();
 // Get users list
 $db = getDB();
 $users = $db->query('SELECT id, username, is_manager, created_at FROM users ORDER BY created_at ASC')->fetchAll();
+
+// Get API tokens (manager only)
+$tokens = isManager() ? getApiTokens() : [];
 ?>
 
 <div class="row">
@@ -287,6 +290,77 @@ $users = $db->query('SELECT id, username, is_manager, created_at FROM users ORDE
         </div>
     </div>
 </div>
+
+<?php if (isManager()): ?>
+<div class="row">
+    <div class="col-12 mb-3">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <i class="bi bi-key-fill"></i> API Tokens
+                <small class="text-white-50 ms-2">Autentificare pentru request-uri HTTP primite (<code class="text-white-50">/api/receive.php</code>)</small>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <table class="table table-sm table-striped" id="tokens-table">
+                            <thead>
+                                <tr><th>Token</th><th>Comentariu</th><th>Creat la</th><th>Actiuni</th></tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($tokens)): ?>
+                                <tr id="tokens-empty-row">
+                                    <td colspan="4" class="text-muted text-center">Niciun token creat.</td>
+                                </tr>
+                                <?php endif; ?>
+                                <?php foreach ($tokens as $tok): ?>
+                                <tr id="token-row-<?= $tok['id'] ?>">
+                                    <td>
+                                        <code><?= htmlspecialchars(substr($tok['token'], 0, 8)) ?>...</code>
+                                        <button class="btn btn-sm btn-outline-secondary copy-token-btn ms-1 py-0"
+                                                data-token="<?= htmlspecialchars($tok['token']) ?>"
+                                                title="Copiaza token">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </td>
+                                    <td><?= htmlspecialchars($tok['comment'] ?? '—') ?></td>
+                                    <td><small><?= htmlspecialchars($tok['created_at']) ?></small></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger delete-token-btn"
+                                                data-token-id="<?= $tok['id'] ?>">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-lg-4">
+                        <form id="add-token-form" class="border rounded p-3 bg-light">
+                            <h6><i class="bi bi-plus-circle"></i> Genereaza Token Nou</h6>
+                            <div class="mb-2">
+                                <input type="text" class="form-control form-control-sm" id="new-token-comment"
+                                       placeholder="Comentariu (ex: Sistem HIS)" maxlength="255">
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-dark w-100">
+                                Genereaza
+                            </button>
+                        </form>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                Trimite tokenul in header:<br>
+                                <code>Authorization: Bearer &lt;token&gt;</code><br>
+                                sau:<br>
+                                <code>X-API-Token: &lt;token&gt;</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Cancel Reason Modal -->
 <div class="modal fade" id="cancelModal" tabindex="-1">

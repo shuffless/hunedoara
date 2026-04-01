@@ -81,6 +81,15 @@ CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+-- API Tokens for incoming HTTP request authentication
+CREATE TABLE IF NOT EXISTS api_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    comment VARCHAR(255) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_token (token)
+) ENGINE=InnoDB;
+
 -- Insert default beds (1-10)
 INSERT INTO beds (bed_name) VALUES
 ('Bed 1'), ('Bed 2'), ('Bed 3'), ('Bed 4'), ('Bed 5'),

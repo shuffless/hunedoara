@@ -10,7 +10,10 @@
 </FilesMatch>
 
 # Deny access to includes directory
+# Pass Authorization header to PHP (needed for Bearer token auth in api/receive.php)
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^includes/ - [F,L]
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>

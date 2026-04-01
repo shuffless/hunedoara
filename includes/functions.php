@@ -351,3 +351,28 @@ function getStats() {
 
     return $stats;
 }
+
+/**
+ * Validate an incoming API token against the database.
+ */
+function validateApiToken($token) {
+    if (empty($token)) {
+        return false;
+    }
+    try {
+        $db = getDB();
+        $stmt = $db->prepare('SELECT id FROM api_tokens WHERE token = ?');
+        $stmt->execute([$token]);
+        return $stmt->fetch() !== false;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Get all API tokens for display in the dashboard.
+ */
+function getApiTokens() {
+    $db = getDB();
+    return $db->query('SELECT id, token, comment, created_at FROM api_tokens ORDER BY created_at DESC')->fetchAll();
+}

@@ -292,4 +292,98 @@ $(document).ready(function () {
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+
+    // --- API Token Management ---
+
+    $('#add-token-form').on('submit', function (e) {
+        e.preventDefault();
+        var comment = $('#new-token-comment').val().trim();
+        var btn = $(this).find('button[type=submit]');
+        btn.prop('disabled', true).text('Se genereaza...');
+
+        $.ajax({
+            url: 'api/tokens.php',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ action: 'add', comment: comment }),
+            success: function (res) {
+                if (res.success) {
+                    // Remove empty-state row if present
+                    $('#tokens-empty-row').remove();
+
+                    var row = '<tr id="token-row-' + res.token_id + '">'
+                        + '<td>'
+                        + '<code>' + escapeHtml(res.token.substring(0, 8)) + '...</code>'
+                        + ' <button class="btn btn-sm btn-outline-secondary copy-token-btn ms-1 py-0"'
+                        + ' data-token="' + escapeHtml(res.token) + '" title="Copiaza token">'
+                        + '<i class="bi bi-clipboard"></i></button>'
+                        + '</td>'
+                        + '<td>' + escapeHtml(res.comment || '—') + '</td>'
+                        + '<td><small>' + escapeHtml(res.created_at) + '</small></td>'
+                        + '<td><button class="btn btn-sm btn-outline-danger delete-token-btn"'
+                        + ' data-token-id="' + res.token_id + '">'
+                        + '<i class="bi bi-trash"></i></button></td>'
+                        + '</tr>';
+                    $('#tokens-table tbody').prepend(row);
+
+                    $('#new-token-comment').val('');
+                    alert('Token generat. Copiaza-l acum:\n\n' + res.token);
+                } else {
+                    alert('Eroare: ' + (res.error || 'Unknown error'));
+                }
+            },
+            error: function () {
+                alert('Eroare de retea.');
+            },
+            complete: function () {
+                btn.prop('disabled', false).text('Genereaza');
+            }
+        });
+    });
+
+    $(document).on('click', '.copy-token-btn', function () {
+        var token = $(this).data('token');
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(token).then(function () {
+                alert('Token copiat in clipboard.');
+            });
+        } else {
+            prompt('Copiaza tokenul:', token);
+        }
+    });
+
+    $(document).on('click', '.delete-token-btn', function () {
+        var tokenId = $(this).data('token-id');
+        if (!confirm('Stergi acest token? Sistemele care il folosesc nu vor mai putea trimite date.')) return;
+
+        var btn = $(this);
+        btn.prop('disabled', true);
+
+        $.ajax({
+            url: 'api/tokens.php',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ action: 'delete', token_id: tokenId }),
+            success: function (res) {
+                if (res.success) {
+                    $('#token-row-' + tokenId).addClass('fade-out');
+                    setTimeout(function () {
+                        $('#token-row-' + tokenId).remove();
+                        if ($('#tokens-table tbody tr').length === 0) {
+                            $('#tokens-table tbody').html(
+                                '<tr id="tokens-empty-row"><td colspan="4" class="text-muted text-center">Niciun token creat.</td></tr>'
+                            );
+                        }
+                    }, 500);
+                } else {
+                    alert('Eroare: ' + (res.error || 'Unknown error'));
+                    btn.prop('disabled', false);
+                }
+            },
+            error: function () {
+                alert('Eroare de retea.');
+                btn.prop('disabled', false);
+            }
+        });
+    });
 });
