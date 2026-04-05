@@ -34,6 +34,11 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
                     <li class="nav-item">
                         <a class="nav-link <?= $currentPage === 'messages' ? 'active' : '' ?>" href="messages.php">Messages</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= $currentPage === 'admit' ? 'active' : '' ?>" href="admit.php">
+                            <i class="bi bi-person-plus-fill"></i> Admitere
+                        </a>
+                    </li>
                 </ul>
                 <span class="navbar-text me-3">
                     <i class="bi bi-person-circle"></i> <?= htmlspecialchars(getCurrentUser()) ?>

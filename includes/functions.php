@@ -376,3 +376,92 @@ function getApiTokens() {
     $db = getDB();
     return $db->query('SELECT id, token, comment, created_at FROM api_tokens ORDER BY created_at DESC')->fetchAll();
 }
+
+/**
+ * Directly admit a patient from the manual form:
+ * builds HL7 ADT^A01 (+ DG1), sends via MLLP, stores in DB, allocates bed.
+ * Bypasses the pending queue — patient goes straight to 'allocated'.
+ */
+function directAdmitPatient($patientData, $bedId) {
+    $db = getDB();
+
+    try {
+        // Verify bed is still available
+        $stmt = $db->prepare('SELECT id, bed_name FROM beds WHERE id = ? AND is_occupied = 0');
+        $stmt->execute([$bedId]);
+        $bed = $stmt->fetch();
+
+        if (!$bed) {
+            return ['success' => false, 'error' => 'Patul selectat nu mai este disponibil.'];
+        }
+
+        // Build HL7 ADT^A01
+        $hl7Message = HL7Parser::buildADT_A01($patientData, $bed['bed_name']);
+
+        // Append DG1 segment if diagnosis is provided
+        if (!empty($patientData['diagnosis_description'])) {
+            $diagDesc = str_replace(['|', "\r", "\n"], [' ', ' ', ' '], $patientData['diagnosis_description']);
+            $diagCode = str_replace(['|', "\r", "\n"], [' ', ' ', ' '], $patientData['diagnosis_code'] ?? '');
+            $hl7Message .= 'DG1|1||' . $diagCode . '|' . $diagDesc . '||F' . "\r";
+        }
+
+        // Fingerprint for deduplication
+        $fingerprint = generateFingerprint($patientData);
+        $stmt = $db->prepare('SELECT id FROM raw_requests WHERE fingerprint = ?');
+        $stmt->execute([$fingerprint]);
+        if ($stmt->fetch()) {
+            return ['success' => false, 'error' => 'Pacientul a fost deja inregistrat (duplicat detectat).'];
+        }
+
+        $db->beginTransaction();
+
+        // Store raw request
+        $senderIp = $_SERVER['REMOTE_ADDR'] ?? 'manual_form';
+        $stmt = $db->prepare('INSERT INTO raw_requests (raw_data, data_format, sender_ip, fingerprint, received_at) VALUES (?, "hl7", ?, ?, NOW())');
+        $stmt->execute([$hl7Message, $senderIp, $fingerprint]);
+        $requestId = $db->lastInsertId();
+
+        // Store EAV patient data
+        $stmt = $db->prepare('INSERT INTO patient_data (id, field_name, field_value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE field_value = VALUES(field_value)');
+        foreach ($patientData as $fieldName => $value) {
+            $stmt->execute([$requestId, $fieldName, $value]);
+        }
+
+        // Add to pending_patients directly as 'allocated' (skip pending queue)
+        $patientName = $patientData['patient_name'];
+        $stmt = $db->prepare('INSERT INTO pending_patients (request_id, patient_name, status, created_at) VALUES (?, ?, "allocated", NOW())');
+        $stmt->execute([$requestId, $patientName]);
+        $pendingPatientId = $db->lastInsertId();
+
+        // Send HL7 to destination via MLLP
+        $response = HL7Parser::sendMessage($hl7Message);
+        $responseStatus = ($response !== false && $response !== '') ? 'success' : 'failure';
+        if ($response === false) {
+            $response = 'Connection failed';
+            $responseStatus = 'failure';
+        }
+
+        // Log sent message
+        $stmt = $db->prepare('INSERT INTO sent_messages (pending_patient_id, hl7_message, event_type, allocated_bed, cancel_reason, destination_response, response_status, sent_at) VALUES (?, ?, "bed_allocation", ?, NULL, ?, ?, NOW())');
+        $stmt->execute([$pendingPatientId, $hl7Message, $bed['bed_name'], $response, $responseStatus]);
+
+        // Block the bed
+        $stmt = $db->prepare('UPDATE beds SET is_occupied = 1, occupied_by = ? WHERE id = ?');
+        $stmt->execute([$pendingPatientId, $bedId]);
+
+        $db->commit();
+
+        return [
+            'success'         => true,
+            'patient_name'    => $patientName,
+            'bed_name'        => $bed['bed_name'],
+            'bed_id'          => (int) $bedId,
+            'response_status' => $responseStatus,
+        ];
+
+    } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        logError('Direct admit failed: ' . $e->getMessage(), 'direct_admit');
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
